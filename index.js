@@ -119,6 +119,7 @@ app.get(userPath+"/all", function (req, res) {
 app.get(userPath+"/find", function (req, res) {
   let sql = "SELECT * FROM users"; 
   let condition = createCondition(req.query); // output t.ex. " WHERE lastname='Rosencrantz'"
+  console.log("req.query: "+req.query)
   console.log(sql + condition); // t.ex. SELECT * FROM users WHERE lastname="Rosencrantz"
 
   con.query(sql + condition, function (error, results, fields) {
@@ -218,17 +219,26 @@ app.post(userPath+"/add", function (req, res) {
 
 
 app.put(userPath+"/update/:id", function (req, res) {
-    if (!(req.body && req.body.username && req.body.password && req.body.firstname && req.body.lastname && req.body.email && req.body.role)){
+
+    const data= req.body;
+    
+
+    if (!(data && data.username && data.password && data.firstname && data.lastname && data.email && data.role)){
 
         return res.status(400).send("400: Bad request");
     }
 
-    const userid= req.params.id;
+    const userid= req.params.id; 
+    const {username, password, firstname, lastname, email, role}= data;
 
     con.query(
-    `UPDATE users 
+   /* `UPDATE users 
     SET username ='${req.body.username}', password='${hash(req.body.password)}', firstname= '${req.body.firstname}', lastname= '${req.body.lastname}', email= '${req.body.email}',role='${req.body.role}' 
-    WHERE id='${userid}'`,
+    WHERE id='${userid}'`,*/
+    `UPDATE users 
+    SET username =?, password=?, firstname=?, lastname=?, email=?, role=? 
+    WHERE id=?`,
+    [username, hash(password), firstname, lastname, email, role, userid], // Wen user update password they use ordinary pass and change to hash
      (error, results, fieldes) => {
         if (error){
             console.error("Update user error!" +error);
