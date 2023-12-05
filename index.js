@@ -11,7 +11,7 @@ const mysql = require("mysql2");
 con = mysql.createConnection({
     host: "localhost",
     user: "root",
-    password: "Your password",
+    password: "Miwakodori23!",
     database: "library_db2023", 
 });
 
@@ -84,7 +84,7 @@ let userPath= "/user"
 
 app.get(userPath+"/all", function (req, res) {
 
-    //When you copy paste token in Insomnia 
+    //When you copy paste token in Insomnia "......"-> ......
     let authHeader = req.headers["authorization"];
     if(authHeader=== undefined){
         return res.status(400).send("Bad request")
@@ -210,10 +210,43 @@ app.post(userPath+"/add", function (req, res) {
                     email:req.body.email,
                     role: req.body.role,
                 };// do not return password!!!
-                return res.send(output);
+                return res.sendStatus(200).send(output);
             });
 
         });
 });
 
 
+app.put(userPath+"/update/:id", function (req, res) {
+    if (!(req.body && req.body.username && req.body.password && req.body.firstname && req.body.lastname && req.body.email && req.body.role)){
+
+        return res.status(400).send("400: Bad request");
+    }
+
+    const userid= req.params.id;
+
+    con.query(
+    `UPDATE users 
+    SET username ='${req.body.username}', password='${hash(req.body.password)}', firstname= '${req.body.firstname}', lastname= '${req.body.lastname}', email= '${req.body.email}',role='${req.body.role}' 
+    WHERE id='${userid}'`,
+     (error, results, fieldes) => {
+        if (error){
+            console.error("Update user error!" +error);
+          return  res.status(500).send("500:Error updating error")
+        } else {
+
+            let output ={
+                id: parseInt(userid),
+                username: req.body.username,
+                firstname: req.body.firstname,
+                lastname: req.body.lastname,
+                email:req.body.email,
+                role: req.body.role,
+            };// do not return password!!!
+            return res.status(200).send(output);
+            //res.status(200).send("200: OK!")
+        }
+
+    }
+    )
+});
