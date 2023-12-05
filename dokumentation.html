@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Server Uppgift 2: Dokumentation av det här APIet</h1>
+    <h2>Routes</h2>
+
+    <ul>
+        <li><span>&#x1f510;</span><em>GET /users</em> - returnerar alla användare. </li>
+        <li><span>&#x1f510;</span><em>GET /users/{id}</em> - returnerar en user med angivet id eller status 204 om användaren saknas.</li>
+        <li><span>&#x1f510;</span><em>POST /users</em> - Skapar en ny användare accepterar JSON object på formatet<br>
+            {"username":"unik namn", "first_name":"", "last_name":""}. username är obligatoriskt och ska var unikt.</li>
+        <li><span>         </span><em>POST /login</em> - för inloggnin. Retunerar en JWT som används som bearer token i anrop till outes skyddade med auth. <br>
+            Accepterar JSON object på formatet {"username":"", "password":"", "last_name":""}</li>
+    </ul>
+
+    <p><span>&#x1f510;</span>= denna route kräver ett giltigt bearer token i authorization header.</p>
+</body>
+</html>
