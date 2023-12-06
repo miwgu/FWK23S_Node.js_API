@@ -365,7 +365,7 @@ app.post(userPath+"/add", function (req, res) {
                     email:req.body.email,
                     role: req.body.role,
                 };// do not return password!!!
-                return res.sendStatus(201).send(output);
+                return res.status(201).send(output);
             });
 
         });
@@ -493,3 +493,41 @@ app.put(userPath+"/update/:id", function (req, res) {
 
 });
 
+app.delete(userPath+"/delete/:id", function (req, res) {
+
+    let authHeader = req.headers["authorization"];
+    if(authHeader=== undefined){
+        return res.status(400).send("Bad request")
+    }
+    
+    let token = authHeader.slice(7);
+    console.log("Token"+token);
+
+    let decoded;
+    try {
+        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
+    } catch(error){
+        console.log(error);
+        return res.status(401).send("Invalid auth token");
+    }
+
+     console.log("DECODED: "+decoded);
+     console.log("DECODED Role: "+decoded.role);
+
+    if (decoded.role ==="Admin"){
+      const userid= req.params.id; 
+
+      con.query(`DELETE FROM users WHERE id=?`,
+      [userid],
+      (error, results, fields)=> {
+        if (error){
+            console.error("Delete user error!" +error);
+          return  res.status(500).send("500:Error delete user")
+        }
+    return res.status(200).send("This id: "+ userid + " is deleted.");
+  });
+} else {
+    return res.status(403).send("Your are not admin! You cannot access this data")
+}
+
+});
