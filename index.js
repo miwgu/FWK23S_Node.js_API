@@ -59,11 +59,13 @@ app.post("/login", function (req, res) {
                 });*/
 
                 let payload ={
-                    sub: results[0].username,
+                    sub: results[0].id,
+                    username:results[0].username,
                     firstname: results[0].firstname,
                     lastname: results[0].lastname,
                     email: results[0].email,
                     role: results[0].role,
+                    exp: Math.floor(Date.now()/1000) + (60*60) // time-limit token: current time + 1hour
                 };
                 let token = jwt.sign(payload, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956")
                 res.json(token);
@@ -77,10 +79,15 @@ app.post("/login", function (req, res) {
 
 
 /**
- * User/Admin or Visitor
+ * User endpoints
+ * Role-> Admin or Visitor
  */
 const users_columns = ["username", "password", "firstname", "lastname", "email", "role"];// users table
 let userPath= "/user"
+
+/**
+ * Admin: Get all users
+ */
 
 app.get(userPath+"/all", function (req, res) {
 
@@ -106,33 +113,66 @@ app.get(userPath+"/all", function (req, res) {
     if (decoded.role ==="Admin"){
 
     let sql = "SELECT * FROM users"; 
-    con.query(sql, function (error, results, fields) {
-      res.status(200).send(results);
+    con.query(sql,
+         function (error, results, fields) {
+     return res.status(200).send(results);
     });
 } else{
-    return res.send("Your are not admin! You cannot access this data")
+    return res.status(403).send("Your are not admin! You cannot access this data")
 } 
 
   });
 
-
+/**
+ * Admin: Serch user by query;username,firstname, lastname, email, role 
+ * It is better to fix condition
+ * ex: http://localhost:3000/user/find?username=pegu
+ *     http://localhost:3000/user/find?role=Admin
+ */
 app.get(userPath+"/find", function (req, res) {
+
+    let authHeader = req.headers["authorization"];
+    if(authHeader=== undefined){
+        return res.status(400).send("Bad request")
+    }
+    
+    let token = authHeader.slice(7);
+    console.log("Token"+token);
+
+    let decoded;
+    try {
+        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
+    } catch(error){
+        console.log(error);
+        return res.status(401).send("Invalid auth token");
+    }
+
+     console.log("DECODED: "+decoded);
+     console.log("DECODED Role: "+decoded.role);
+
+    if (decoded.role ==="Admin"){
+
   let sql = "SELECT * FROM users"; 
   let condition = createCondition(req.query); // output t.ex. " WHERE lastname='Rosencrantz'"
-  console.log("req.query: "+req.query)
+
   console.log(sql + condition); // t.ex. SELECT * FROM users WHERE lastname="Rosencrantz"
 
   con.query(sql + condition, function (error, results, fields) {
-    res.status(200).send(results);
+    return res.status(200).send(results);
   });
+} else {
+    return res.status(403).send("Your are not admin! You cannot access this data")
+}
+
 });
 
-
 let createCondition =(query) => {
-  console.log("QUERY: "+query) 
+  console.log("QUERY: "+ JSON.stringify(query)) //{"username":"pegu"}
   let output= " WHERE ";
   for(let key in query){
     if(users_columns.includes(key)){
+        console.log("Key: "+key)// username
+        console.log("query[key]: "+ query[key]);//pegu
         output += `${key}="${query[key]}" OR `;
     }
   }
@@ -145,7 +185,31 @@ let createCondition =(query) => {
 };
 
 
+/**
+ * Admin: Search user byId
+ * Visitor: Show own userinfo
+ */
 app.get(userPath+"/byId/:id", function(req,res){
+    let authHeader = req.headers["authorization"];
+    if(authHeader=== undefined){
+        return res.status(400).send("Bad request")
+    }
+    
+    let token = authHeader.slice(7);
+    console.log("Token"+token);
+
+    let decoded;
+    try {
+        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
+    } catch(error){
+        console.log(error);
+        return res.status(401).send("Invalid auth token");
+    }
+
+     console.log("DECODED: "+decoded);
+     console.log("DECODED Role: "+decoded.role);
+    if (decoded.role ==="Admin"){
+
     let sql=`SELECT * FROM users WHERE id=` +req.params.id;
     console.log(sql);
     con.query(sql, 
@@ -155,12 +219,51 @@ app.get(userPath+"/byId/:id", function(req,res){
         } else{
             res.status(404).send("404: Not found!");
         }
+    });
 
-    })
+ } else{
 
+    let sql=`SELECT * FROM users WHERE id=` +decoded.sub;// sub is id
+    console.log(sql);
+    con.query(sql, 
+        (error, results, fieldes)=>{
+        if(results.length>0){
+
+            res.status(200).send(results);
+        } else{
+            res.status(404).send("404: Not found!");
+        }
+    });
+
+ }
 });
 
+/**
+ * Admin: create user with role Admin or Visitor
+ */
+
 app.post(userPath+"/add", function (req, res) {
+
+    let authHeader = req.headers["authorization"];
+    if(authHeader=== undefined){
+        return res.status(400).send("Bad request")
+    }
+    
+    let token = authHeader.slice(7);
+    console.log("Token"+token);
+
+    let decoded;
+    try {
+        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
+    } catch(error){
+        console.log(error);
+        return res.status(401).send("Invalid auth token");
+    }
+
+     console.log("DECODED: "+decoded);
+     console.log("DECODED Role: "+decoded.role);
+
+    if (decoded.role ==="Admin"){
 
     if (!req.body.username){
        return red.status(400).send("400: username required!")
@@ -197,8 +300,8 @@ app.post(userPath+"/add", function (req, res) {
               let selectSql = 'SELECT LAST_INSERT_ID() as insertId';
     
 
-    con.query(selectSql, (err, results) => {
-            if(err){
+    con.query(selectSql, (error, results) => {
+            if(error){
                 console.error("Error retrieving last insert ID: " + err);
                 return res.status(500).send("500: Error retrieving user ID");
             }
@@ -211,18 +314,43 @@ app.post(userPath+"/add", function (req, res) {
                     email:req.body.email,
                     role: req.body.role,
                 };// do not return password!!!
-                return res.sendStatus(200).send(output);
+                return res.sendStatus(201).send(output);
             });
 
         });
+    }else{
+        return res.status(403).send("Your are not admin! You cannot create user.")
+    }
 });
 
-
+/**
+ * Admin: Update user by Id
+ * Visitor: Update own userinfo
+ */
 app.put(userPath+"/update/:id", function (req, res) {
 
-    const data= req.body;
+    let authHeader = req.headers["authorization"];
+    if(authHeader=== undefined){
+        return res.status(400).send("Bad request")
+    }
     
+    let token = authHeader.slice(7);
+    console.log("Token"+token);
 
+    let decoded;
+    try {
+        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
+    } catch(error){
+        console.log(error);
+        return res.status(401).send("Invalid auth token");
+    }
+
+     console.log("DECODED: "+decoded);
+     console.log("DECODED Role: "+decoded.role);
+
+    if (decoded.role ==="Admin"){
+
+    const data= req.body;
     if (!(data && data.username && data.password && data.firstname && data.lastname && data.email && data.role)){
 
         return res.status(400).send("400: Bad request");
@@ -232,9 +360,6 @@ app.put(userPath+"/update/:id", function (req, res) {
     const {username, password, firstname, lastname, email, role}= data;
 
     con.query(
-   /* `UPDATE users 
-    SET username ='${req.body.username}', password='${hash(req.body.password)}', firstname= '${req.body.firstname}', lastname= '${req.body.lastname}', email= '${req.body.email}',role='${req.body.role}' 
-    WHERE id='${userid}'`,*/
     `UPDATE users 
     SET username =?, password=?, firstname=?, lastname=?, email=?, role=? 
     WHERE id=?`,
@@ -256,7 +381,44 @@ app.put(userPath+"/update/:id", function (req, res) {
             return res.status(200).send(output);
             //res.status(200).send("200: OK!")
         }
+    });
+} else{
+//*********Visitor***********
+    const data= req.body;
+    if (!(data && data.username && data.password && data.firstname && data.lastname && data.email && data.role)){
 
+        return res.status(400).send("400: Bad request");
     }
-    )
+
+    const userid= decoded.sub;// Visitor can access own data payload sub->id
+    console.log("userid: "+JSON.stringify(userid))
+    const {username, password, firstname, lastname, email, role}= data;
+
+    con.query(
+    `UPDATE users 
+    SET username =?, password=?, firstname=?, lastname=?, email=?, role=? 
+    WHERE id=?`,
+    [username, hash(password), firstname, lastname, email, role, userid], // Wen user update password they use ordinary pass and change to hash
+     (error, results, fieldes) => {
+        if (error){
+            console.error("Update user error!" +error);
+          return  res.status(500).send("500:Error updating error")
+        } else {
+
+            let output ={
+                id: parseInt(userid),
+                username: req.body.username,
+                firstname: req.body.firstname,
+                lastname: req.body.lastname,
+                email:req.body.email,
+                role: req.body.role,
+            };// do not return password!!!
+            return res.status(200).send(output);
+            //res.status(200).send("200: OK!")
+        }
+    });
+
+
+}
+
 });
