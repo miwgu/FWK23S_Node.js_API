@@ -123,6 +123,54 @@ app.get(userPath+"/all", function (req, res) {
 
   });
 
+
+  /**
+ * Admin: Serch user by username
+ * It is better to fix condition
+ * http://localhost:3000/user/find?username=pegu
+ *     
+ */
+/*
+app.get(userPath+"/find/ByUsername/:username", function (req, res) {
+
+    let authHeader = req.headers["authorization"];
+    if(authHeader=== undefined){
+        return res.status(400).send("Bad request")
+    }
+    
+    let token = authHeader.slice(7);
+    console.log("Token"+token);
+
+    let decoded;
+    try {
+        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
+    } catch(error){
+        console.log(error);
+        return res.status(401).send("Invalid auth token");
+    }
+
+     console.log("DECODED: "+decoded);
+     console.log("DECODED Role: "+decoded.role);
+
+    if (decoded.role ==="Admin"){
+
+  //let sql = "SELECT * FROM users"; 
+  //let condition = createCondition(req.query); // output t.ex. " WHERE lastname='Rosencrantz'"
+
+  //console.log(sql + condition); // t.ex. SELECT * FROM users WHERE lastname="Rosencrantz"
+
+  con.query(
+    `SELECT u FROM users u where LOWER (u.req.params.username) like LOWER(concat('%', ?1, '%'))`,
+     (error, results, fields)=> {
+    return res.status(200).send(results);
+  });
+} else {
+    return res.status(403).send("Your are not admin! You cannot access this data")
+}
+
+});
+*/
+
 /**
  * Admin: Serch user by query;username,firstname, lastname, email, role 
  * It is better to fix condition
@@ -166,6 +214,7 @@ app.get(userPath+"/find", function (req, res) {
 
 });
 
+
 let createCondition =(query) => {
   console.log("QUERY: "+ JSON.stringify(query)) //{"username":"pegu"}
   let output= " WHERE ";
@@ -186,10 +235,10 @@ let createCondition =(query) => {
 
 
 /**
- * Admin: Search user byId
+ * Admin: Search user byId OR byUsername
  * Visitor: Show own userinfo
  */
-app.get(userPath+"/byId/:id", function(req,res){
+app.get(userPath+"/byIdORUsername/:idORusername", function(req,res){
     let authHeader = req.headers["authorization"];
     if(authHeader=== undefined){
         return res.status(400).send("Bad request")
@@ -209,10 +258,11 @@ app.get(userPath+"/byId/:id", function(req,res){
      console.log("DECODED: "+decoded);
      console.log("DECODED Role: "+decoded.role);
     if (decoded.role ==="Admin"){
+    const id_username= req.params.idORusername;
 
-    let sql=`SELECT * FROM users WHERE id=` +req.params.id;
-    console.log(sql);
-    con.query(sql, 
+    con.query(
+        `SELECT * FROM users WHERE id=? OR username=?`,
+        [id_username, id_username], 
         (error, results, fieldes)=>{
         if(results.length>0){
             res.status(200).send(results);
@@ -223,9 +273,10 @@ app.get(userPath+"/byId/:id", function(req,res){
 
  } else{
 
-    let sql=`SELECT * FROM users WHERE id=` +decoded.sub;// sub is id
-    console.log(sql);
-    con.query(sql, 
+
+    con.query(
+        `SELECT * FROM users WHERE id=? OR username=?`,
+    [decoded.sub, decoded.username], //sub is id
         (error, results, fieldes)=>{
         if(results.length>0){
 
@@ -351,6 +402,7 @@ app.put(userPath+"/update/:id", function (req, res) {
     if (decoded.role ==="Admin"){
 
     const data= req.body;
+    console.log(JSON.stringify(req.body))
     if (!(data && data.username && data.password && data.firstname && data.lastname && data.email && data.role)){
 
         return res.status(400).send("400: Bad request");
@@ -359,29 +411,47 @@ app.put(userPath+"/update/:id", function (req, res) {
     const userid= req.params.id; 
     const {username, password, firstname, lastname, email, role}= data;
 
-    con.query(
-    `UPDATE users 
-    SET username =?, password=?, firstname=?, lastname=?, email=?, role=? 
-    WHERE id=?`,
-    [username, hash(password), firstname, lastname, email, role, userid], // Wen user update password they use ordinary pass and change to hash
-     (error, results, fieldes) => {
-        if (error){
-            console.error("Update user error!" +error);
-          return  res.status(500).send("500:Error updating error")
-        } else {
 
-            let output ={
-                id: parseInt(userid),
-                username: req.body.username,
-                firstname: req.body.firstname,
-                lastname: req.body.lastname,
-                email:req.body.email,
-                role: req.body.role,
-            };// do not return password!!!
-            return res.status(200).send(output);
-            //res.status(200).send("200: OK!")
+    con.query(
+        `SELECT * FROM users WHERE id=?`,
+        [userid], 
+        (error, results, fieldes)=>{
+        if(results.length===0){
+            res.status(404).send("404: Not found! This id: "+userid +" doesn´t exist.");
+            console.log("There is no such a id")
+        } else{
+
+            con.query(
+                `UPDATE users 
+                SET username =?, password=?, firstname=?, lastname=?, email=?, role=? 
+                WHERE id=?`,
+                [username, hash(password), firstname, lastname, email, role, userid], // When user update password they use ordinary pass and change to hash
+                 (error, results, fieldes) => {
+                    if (error){
+                        console.error("Update user error!" +error);
+                      return  res.status(500).send("500:Error updating error")
+                    } else {
+            
+                        let output ={
+                            id: parseInt(userid),
+                            username: req.body.username,
+                            firstname: req.body.firstname,
+                            lastname: req.body.lastname,
+                            email:req.body.email,
+                            role: req.body.role,
+                        };// do not return password!!!
+                        return res.status(200).send(output);
+                        //res.status(200).send("200: OK!")
+                    }
+                });
+
+            
         }
     });
+
+
+
+    
 } else{
 //*********Visitor***********
     const data= req.body;
@@ -422,3 +492,4 @@ app.put(userPath+"/update/:id", function (req, res) {
 }
 
 });
+
