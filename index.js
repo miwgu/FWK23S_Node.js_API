@@ -77,13 +77,13 @@ app.post("/login", function (req, res) {
 });
 
  function authToken (req, res, next){
-    let authHeader = req.headers["auhorization"];
-    if (authHeader = undefined){
+    let authHeader = req.headers["authorization"];
+    if (authHeader === undefined){
         return res.status(400).send("Bad request");
     }
     let token = authHeader.slice(7);
     try{
-        let decoded =jwt.verify(token, )
+        let decoded =jwt.verify(token,"fghjl#a/s&asojcd12askpe%nvhuhimitsu956")
         req.decoded =decoded;
         next(); // Go to next middleware or route handler
     } catch(error){
@@ -101,26 +101,11 @@ app.post("/login", function (req, res) {
  }
 
 
-app.get("/token-info",  function(req, res){
-
-    let authHeader = req.headers["authorization"];
-    if(authHeader=== undefined){
-        return res.status(400).send("Bad request")
-    }
-    
-    let token = authHeader.slice(7);
-    console.log("Token"+token);
-
-    let decoded;
-    try {
-        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
-    } catch(error){
-        console.log(error);
-        return res.status(401).send("Invalid auth token");
-    }
+app.get("/token-info", authToken, function(req, res){
+    const decoded=req.decoded;
 
     let decoded_payload ={
-        sub: decoded.sub,
+        sub: decoded.sub, // sub = id
         username:decoded.username,
         firstname: decoded.firstname,
         lastname: decoded.lastname,
@@ -131,7 +116,7 @@ app.get("/token-info",  function(req, res){
     }
     return res.status(200).send(decoded_payload);
 
-}) 
+}); 
 
 
 
