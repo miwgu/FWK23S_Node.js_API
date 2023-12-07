@@ -17,15 +17,47 @@ con = mysql.createConnection({
 
 app.use(express.json());
 
+
+const dotenv = require('dotenv'); // npm i dotenv ->To bring token i .env install dotenv
+dotenv.config();
 const crypto = require('crypto');
+const jwt = require("jsonwebtoken"); // npm i jsonwebtoken
+const { decode } = require('punycode');
+
 function hash(data) {
     const hash = crypto.createHash("sha256");
     hash.update(data);
     return hash.digest("hex");
 }
 
+let secretKey= () =>{
+    var key = crypto.randomBytes(32).toString('hex');
+    return key;
+}
 
-const jwt = require("jsonwebtoken"); // npm i jsonwebtoken
+ const JWT_SECRET =process.env.TOKEN_SECRET||secretKey();
+ /**
+  * Function signJWT: to sign a JWT
+  * @param {*} payload 
+  * @returns 
+  */
+ let signJWT =(payload)=>{
+  return jwt.sign(payload, JWT_SECRET)
+ }
+ /**
+  * Function decodeJWT : to Verify and decode a JWT
+  * @param {*} token 
+  * @returns 
+  */
+
+ let decodeJWT = (token) =>{
+    try{
+        const decoded = jwt.verify(token, JWT_SECRET);
+        return decoded;
+    } catch(error){
+        return null;
+    }
+ }
 
 app.post("/login", function (req, res) {
 
@@ -67,7 +99,7 @@ app.post("/login", function (req, res) {
                     role: results[0].role,
                     exp: Math.floor(Date.now()/1000) + (60*60) // time-limit token: current time + 1hour
                 };
-                let token = jwt.sign(payload, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956")
+                let token = signJWT(payload);
                 res.json(token);
             } else {
                 return res.status(401).send("401: Unauthorized");
@@ -83,7 +115,7 @@ app.post("/login", function (req, res) {
     }
     let token = authHeader.slice(7);
     try{
-        let decoded =jwt.verify(token,"fghjl#a/s&asojcd12askpe%nvhuhimitsu956")
+        let decoded =decodeJWT(token);
         req.decoded =decoded;
         next(); // Go to next middleware or route handler
     } catch(error){
@@ -104,6 +136,7 @@ app.post("/login", function (req, res) {
 app.get("/token-info", authToken, function(req, res){
     const decoded=req.decoded;
 
+    console.log(JSON.stringify(req.decoded))
     let decoded_payload ={
         sub: decoded.sub, // sub = id
         username:decoded.username,
