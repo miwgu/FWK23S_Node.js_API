@@ -76,6 +76,63 @@ app.post("/login", function (req, res) {
     );
 });
 
+ function authToken (req, res, next){
+    let authHeader = req.headers["auhorization"];
+    if (authHeader = undefined){
+        return res.status(400).send("Bad request");
+    }
+    let token = authHeader.slice(7);
+    try{
+        let decoded =jwt.verify(token, )
+        req.decoded =decoded;
+        next(); // Go to next middleware or route handler
+    } catch(error){
+        console.log(error);
+        return res.status(401).send("Invalid Authentication Token")
+    }
+ }
+
+ function isAdmin(req, res, next){
+    const decoded =req.decoded;
+    if (decoded.role!=="Admin"){
+        return res.status(403).send("You are not an Admin! Access denied.")
+    }
+    next();
+ }
+
+
+app.get("/token-info",  function(req, res){
+
+    let authHeader = req.headers["authorization"];
+    if(authHeader=== undefined){
+        return res.status(400).send("Bad request")
+    }
+    
+    let token = authHeader.slice(7);
+    console.log("Token"+token);
+
+    let decoded;
+    try {
+        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
+    } catch(error){
+        console.log(error);
+        return res.status(401).send("Invalid auth token");
+    }
+
+    let decoded_payload ={
+        sub: decoded.sub,
+        username:decoded.username,
+        firstname: decoded.firstname,
+        lastname: decoded.lastname,
+        email: decoded.email,
+        role: decoded.role,
+        exp: decoded.exp,
+        iat: decoded.iat
+    }
+    return res.status(200).send(decoded_payload);
+
+}) 
+
 
 
 /**
@@ -84,6 +141,47 @@ app.post("/login", function (req, res) {
  */
 const users_columns = ["username", "password", "firstname", "lastname", "email", "role"];// users table
 let userPath= "/user"
+
+/**
+ * Get own userinfo
+ */
+
+app.get(userPath+"/me", function(req, res){
+
+    let authHeader = req.headers["authorization"];
+    if(authHeader=== undefined){
+        return res.status(400).send("Bad request")
+    }
+    
+    let token = authHeader.slice(7);
+    console.log("Token"+token);
+
+    let decoded;
+    try {
+        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
+    } catch(error){
+        console.log(error);
+        return res.status(401).send("Invalid auth token");
+    }
+
+    con.query(
+    `SELECT * FROM users WHERE id=?`,
+    [decoded.sub],// sub =id
+    (error, results,fields) =>{
+
+        let output ={
+            id: results[0].id,
+            username: results[0].username,
+            firstname: results[0].firstname,
+            lastname: results[0].lastname,
+            email:results[0].email,
+            role: results[0].role,
+        };
+
+        return res.status(200).send(output);
+    })        
+}) ;
+
 
 /**
  * Admin: Get all users
@@ -108,8 +206,6 @@ app.get(userPath+"/all", function (req, res) {
         return res.status(401).send("Invalid auth token");
     }
 
-     console.log("DECODED: "+decoded);
-     console.log("DECODED Role: "+decoded.role);
     if (decoded.role ==="Admin"){
 
     let sql = "SELECT * FROM users"; 
