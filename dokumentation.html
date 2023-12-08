@@ -16,7 +16,17 @@
         <li><span>         </span><em>POST /login</em> - för inloggnin. Retunerar en JWT som används som bearer token i anrop till outes skyddade med auth. </li>
         <li><span>&#x1f510;</span><em>GET /token-info</em> - Inloggade användare returnerar egen token-info. </li>
         
-        <li><span>&#x1f510;</span><em>POST /user/add</em> - Admin kan addera en ny användare. </li>
+        <li><span>&#x1f510;</span><em>POST /user/add</em> - Admin kan addera en ny användare. 
+        {
+            "username": "unikt namn",
+            "password": "u123",
+            "firstname": "Example_förstanamn",
+            "lastname": "Example_Efternamn",
+            "email": "example3@hotmail.com",
+            "role": "Visitor"
+        }
+        Alla fält är obligatoriskt. username ska vara unikt.
+        </li>
         <li><span>&#x1f510;</span><em>PUT /user/update/me</em> - Inloggade användare uppdatera egen användare-info. </li>
         <li><span>&#x1f510;</span><em>PUT /user/update/:id</em> - Admin kan uppdatera användare-info av Id. </li>
         <li><span>&#x1f510;</span><em>GET /user/me</em> - Inloggade användare returnerar egen användare-info. </li>
@@ -26,7 +36,13 @@
 
         <li><span>&#x1f510;</span><em>GET /user/all</em> - Admin kan returnerar alla användare. </li>
         <li><span>&#x1f510;</span><em>DELETE /users/delete/:id</em> - Admin kan deleta en användare av angivet id.</li>
-        <li><span>&#x1f510;</span><em>POST /topic/add</em> - Inloggade användare Skapar en ny rubrik(topic)</li>
+        <li><span>&#x1f510;</span><em>POST /topic/add</em> - Inloggade användare Skapar en ny rubrik(topic)
+            {
+                "heading": "Om Uppgift1",
+                "comment": "Hej Jag vill fråga .....................",
+            }
+            Alla fält är obligatoriskt. *user_id är inställt på inloggade användar-ID.
+        </li>
         <li><span>&#x1f510;</span><em>GET /topic/all</em> - Inloggade användare kan returnerar alla rubrik(topics). </li>
         <li><span>&#x1f510;</span><em>GET /topic/user/:id</em> - Admin kan returnera rubrik(topics) av angivet användares id. </li>
     </ul>

@@ -3,6 +3,16 @@ let app = express();
 app.listen(3000);
 console.log("Serve runs:port 3000");
 
+const myLogger = function (req, res, next) {
+    const clientIP = req.ip;
+    const timestamp= new Date().toUTCString();
+    const log =`${clientIP} [${timestamp}]"${req.method} ${req.originalUrl}"`
+    console.log(log)
+    next()
+  }
+  
+  app.use(myLogger)
+
 app.get("/", function(req, res){
     res.sendFile(__dirname +"/dokumentation.html");
 });
@@ -429,7 +439,6 @@ WHERE id=?`,
 
 /**
  * Admin: Update user by Id
- * Visitor: Update own userinfo
  * !! You do not place app.put(userPath+"/update/me",...  route after this route. (do not want to check isAdmin )
  * isAdmin contenue to check app.put(userPath+"/update/me",... due to the way middleware cascades down the route stack.
  * 
@@ -550,7 +559,7 @@ app.get(topicPath+"/user/:user_id", authToken, isAdmin,function(req, res){
 
 
 /**
- * Admin: create topic with role Admin or Visitor
+ * Admin and Visitor: create topic 
  */
  
 app.post(topicPath+"/add", authToken, function (req, res) {
