@@ -12,7 +12,7 @@ con = mysql.createConnection({
     host: "localhost",
     user: "root",
     password: "",
-    database: "library_db2023", 
+    database: "topic_db2023", 
 });
 
 app.use(express.json());
@@ -22,13 +22,28 @@ const dotenv = require('dotenv'); // npm i dotenv ->To bring token i .env instal
 dotenv.config();
 const crypto = require('crypto');
 const jwt = require("jsonwebtoken"); // npm i jsonwebtoken
-const { decode } = require('punycode');
 
+/*
 function hash(data) {
     const hash = crypto.createHash("sha256");
     hash.update(data);
     return hash.digest("hex");
 }
+*/
+
+
+function hashSalting(password){
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash= crypto.createHash('sha256');
+    hash.update(password+salt);
+    const hashSaltingPassword = hash.digest('hex');
+
+    const conbinedPassword = salt + ':'+ hashSaltingPassword 
+
+    return conbinedPassword;
+}
+
+console.log("conbinedPassword: ", hashSalting("m123"))
 
 let secretKey= () =>{
     var key = crypto.randomBytes(32).toString('hex');
@@ -79,16 +94,21 @@ app.post("/login", function (req, res) {
                 return res.status(401).send("401: Unauthorized");
             }
 
-            let passwordHash = hash(req.body.password);
+            let enteredPass=req.body.password;// userinput
+            let storedConbinedPassword= results[0].password; // from database
+            const [storedSalt, storedHashPassword] =  storedConbinedPassword.split(':');
+            const hash = crypto.createHash('sha256');
+            hash.update(enteredPass+storedSalt);// Use same salt which is stored in database
+            const hasedEnteredPassword= hash.digest('hex');
 
-            if (results[0].password === passwordHash) {
-               /* res.send({
-                    username: results[0].username,
-                    firstname: results[0].firstname,
-                    lastname: results[0].lastname,
-                    email: results[0].email,
-                    role: results[0].role,
-                });*/
+            //1.The first user admin is added from databasen with original password(ex: m123)
+            //2. Change if argument: if (results[0].password === req.body.password)
+            //3. Go to Update same password(ex: m123) -> hashSalting stor ConbinedPassword i database
+            //4. Change if argument: if (hasedEnteredPassword === storedHashPassword)
+            //5. Login again!
+    
+             if (hasedEnteredPassword === storedHashPassword) {  
+               // if (results[0].password === req.body.password){// When you login the first time as Admin user
 
                 let payload ={
                     sub: results[0].id,
@@ -111,12 +131,19 @@ app.post("/login", function (req, res) {
  function authToken (req, res, next){
     let authHeader = req.headers["authorization"];
     if (authHeader === undefined){
-        return res.status(400).send("Bad request");
+        return res.status(400).send("Bad request! Auth header is undefined.");
     }
+
     let token = authHeader.slice(7);
     try{
         let decoded =decodeJWT(token);
+        console.log("req.decoded"+JSON.stringify(req.decoded))
+        console.log("decoded"+JSON.stringify(decoded))
         req.decoded =decoded;
+        console.log("req.decoded"+JSON.stringify(req.decoded))
+       if (decoded===null) {
+            return res.status(400).send("Bad request! Decoded token is null. (Check: token is expired, fail token or token not set )")
+        }
         next(); // Go to next middleware or route handler
     } catch(error){
         console.log(error);
@@ -126,12 +153,16 @@ app.post("/login", function (req, res) {
 
  function isAdmin(req, res, next){
     const decoded =req.decoded;
+
     if (decoded.role!=="Admin"){
         return res.status(403).send("You are not an Admin! Access denied.")
     }
     next();
  }
-
+ 
+ /**
+  * Admin and Visitor: Get own token info
+  */
 
 app.get("/token-info", authToken, function(req, res){
     const decoded=req.decoded;
@@ -164,24 +195,8 @@ let userPath= "/user"
  * Get own userinfo
  */
 
-app.get(userPath+"/me", function(req, res){
-
-    let authHeader = req.headers["authorization"];
-    if(authHeader=== undefined){
-        return res.status(400).send("Bad request")
-    }
-    
-    let token = authHeader.slice(7);
-    console.log("Token"+token);
-
-    let decoded;
-    try {
-        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
-    } catch(error){
-        console.log(error);
-        return res.status(401).send("Invalid auth token");
-    }
-
+app.get(userPath+"/me", authToken,function(req, res){
+    const decoded= req.decoded;
     con.query(
     `SELECT * FROM users WHERE id=?`,
     [decoded.sub],// sub =id
@@ -205,85 +220,15 @@ app.get(userPath+"/me", function(req, res){
  * Admin: Get all users
  */
 
-app.get(userPath+"/all", function (req, res) {
-
-    //When you copy paste token in Insomnia "......"-> ......
-    let authHeader = req.headers["authorization"];
-    if(authHeader=== undefined){
-        return res.status(400).send("Bad request")
-    }
-    
-    let token = authHeader.slice(7);
-    console.log("Token"+token);
-
-    let decoded;
-    try {
-        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
-    } catch(error){
-        console.log(error);
-        return res.status(401).send("Invalid auth token");
-    }
-
-    if (decoded.role ==="Admin"){
+app.get(userPath+"/all", authToken, isAdmin, function (req, res) {
 
     let sql = "SELECT * FROM users"; 
     con.query(sql,
          function (error, results, fields) {
      return res.status(200).send(results);
     });
-} else{
-    return res.status(403).send("Your are not admin! You cannot access this data")
-} 
-
-  });
-
-
-  /**
- * Admin: Serch user by username
- * It is better to fix condition
- * http://localhost:3000/user/find?username=pegu
- *     
- */
-/*
-app.get(userPath+"/find/ByUsername/:username", function (req, res) {
-
-    let authHeader = req.headers["authorization"];
-    if(authHeader=== undefined){
-        return res.status(400).send("Bad request")
-    }
-    
-    let token = authHeader.slice(7);
-    console.log("Token"+token);
-
-    let decoded;
-    try {
-        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
-    } catch(error){
-        console.log(error);
-        return res.status(401).send("Invalid auth token");
-    }
-
-     console.log("DECODED: "+decoded);
-     console.log("DECODED Role: "+decoded.role);
-
-    if (decoded.role ==="Admin"){
-
-  //let sql = "SELECT * FROM users"; 
-  //let condition = createCondition(req.query); // output t.ex. " WHERE lastname='Rosencrantz'"
-
-  //console.log(sql + condition); // t.ex. SELECT * FROM users WHERE lastname="Rosencrantz"
-
-  con.query(
-    `SELECT u FROM users u where LOWER (u.req.params.username) like LOWER(concat('%', ?1, '%'))`,
-     (error, results, fields)=> {
-    return res.status(200).send(results);
-  });
-} else {
-    return res.status(403).send("Your are not admin! You cannot access this data")
-}
-
 });
-*/
+
 
 /**
  * Admin: Serch user by query;username,firstname, lastname, email, role 
@@ -291,28 +236,7 @@ app.get(userPath+"/find/ByUsername/:username", function (req, res) {
  * ex: http://localhost:3000/user/find?username=pegu
  *     http://localhost:3000/user/find?role=Admin
  */
-app.get(userPath+"/find", function (req, res) {
-
-    let authHeader = req.headers["authorization"];
-    if(authHeader=== undefined){
-        return res.status(400).send("Bad request")
-    }
-    
-    let token = authHeader.slice(7);
-    console.log("Token"+token);
-
-    let decoded;
-    try {
-        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
-    } catch(error){
-        console.log(error);
-        return res.status(401).send("Invalid auth token");
-    }
-
-     console.log("DECODED: "+decoded);
-     console.log("DECODED Role: "+decoded.role);
-
-    if (decoded.role ==="Admin"){
+app.get(userPath+"/find", authToken, isAdmin, function (req, res) {
 
   let sql = "SELECT * FROM users"; 
   let condition = createCondition(req.query); // output t.ex. " WHERE lastname='Rosencrantz'"
@@ -322,12 +246,8 @@ app.get(userPath+"/find", function (req, res) {
   con.query(sql + condition, function (error, results, fields) {
     return res.status(200).send(results);
   });
-} else {
-    return res.status(403).send("Your are not admin! You cannot access this data")
-}
 
 });
-
 
 let createCondition =(query) => {
   console.log("QUERY: "+ JSON.stringify(query)) //{"username":"pegu"}
@@ -350,28 +270,9 @@ let createCondition =(query) => {
 
 /**
  * Admin: Search user byId OR byUsername
- * Visitor: Show own userinfo
  */
-app.get(userPath+"/byIdORUsername/:idORusername", function(req,res){
-    let authHeader = req.headers["authorization"];
-    if(authHeader=== undefined){
-        return res.status(400).send("Bad request")
-    }
-    
-    let token = authHeader.slice(7);
-    console.log("Token"+token);
-
-    let decoded;
-    try {
-        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
-    } catch(error){
-        console.log(error);
-        return res.status(401).send("Invalid auth token");
-    }
-
-     console.log("DECODED: "+decoded);
-     console.log("DECODED Role: "+decoded.role);
-    if (decoded.role ==="Admin"){
+app.get(userPath+"/byIdORUsername/:idORusername", authToken, isAdmin, function(req,res){
+   
     const id_username= req.params.idORusername;
 
     con.query(
@@ -384,55 +285,34 @@ app.get(userPath+"/byIdORUsername/:idORusername", function(req,res){
             res.status(404).send("404: Not found!");
         }
     });
-
- } else{
-
-
-    con.query(
-        `SELECT * FROM users WHERE id=? OR username=?`,
-    [decoded.sub, decoded.username], //sub is id
-        (error, results, fieldes)=>{
-        if(results.length>0){
-
-            res.status(200).send(results);
-        } else{
-            res.status(404).send("404: Not found!");
-        }
-    });
-
- }
 });
 
 /**
  * Admin: create user with role Admin or Visitor
  */
 
-app.post(userPath+"/add", function (req, res) {
+let inputRequiredMessage =(input, field_name)=>{
+    if (typeof input!=="string"||input.trim()===""){
+        
+   return field_name +"(Type:String) is required! ";
+ }
+   return ""
+}
 
-    let authHeader = req.headers["authorization"];
-    if(authHeader=== undefined){
-        return res.status(400).send("Bad request")
-    }
+ 
+app.post(userPath+"/add", authToken, isAdmin, function (req, res) {
+    let errormessage = "400: "
+    errormessage += inputRequiredMessage(req.body.username, "username");
+    errormessage += inputRequiredMessage(req.body.password,"password");
+    errormessage += inputRequiredMessage(req.body.firstname,"firstname");
+    errormessage += inputRequiredMessage(req.body.lastname,"lastname");
+    errormessage += inputRequiredMessage(req.body.email,"email");
+    errormessage += inputRequiredMessage(req.body.role,"role");
+
+    if(errormessage!=="400: "){
+        return res.status(400).send( errormessage)
     
-    let token = authHeader.slice(7);
-    console.log("Token"+token);
-
-    let decoded;
-    try {
-        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
-    } catch(error){
-        console.log(error);
-        return res.status(401).send("Invalid auth token");
-    }
-
-     console.log("DECODED: "+decoded);
-     console.log("DECODED Role: "+decoded.role);
-
-    if (decoded.role ==="Admin"){
-
-    if (!req.body.username){
-       return red.status(400).send("400: username required!")
-    }
+}
 
     //let fields =["username", "password", "firstname", "lastname", "email", "role"];
      for (let key in req.body){
@@ -443,7 +323,7 @@ app.post(userPath+"/add", function (req, res) {
 
    let insertSql= `INSERT INTO users (username, password, firstname, lastname, email, role) 
    VALUES ('${req.body.username}', 
-   '${hash(req.body.password)}',
+   '${hashSalting(req.body.password)}',
    '${req.body.firstname}',
    '${req.body.lastname}',
    '${req.body.email}',
@@ -483,47 +363,85 @@ app.post(userPath+"/add", function (req, res) {
             });
 
         });
-    }else{
-        return res.status(403).send("Your are not admin! You cannot create user.")
+});
+
+
+/**
+ * Admin adn Visitor: Update own user info
+ */
+app.put(userPath+"/update/me", authToken, function (req, res) {
+
+    let errormessage = "400: "
+    errormessage += inputRequiredMessage(req.body.username, "username");
+    errormessage += inputRequiredMessage(req.body.password,"password");
+    errormessage += inputRequiredMessage(req.body.firstname,"firstname");
+    errormessage += inputRequiredMessage(req.body.lastname,"lastname");
+    errormessage += inputRequiredMessage(req.body.email,"email");
+    errormessage += inputRequiredMessage(req.body.role,"role");
+
+    if(errormessage!=="400: "){
+        return res.status(400).send( errormessage)
+}
+const decoded=req.decoded; 
+const userid= decoded.sub;// Visitor can access own data payload sub->id
+console.log("userid: "+JSON.stringify(userid))
+const {username, password, firstname, lastname, email, role}= req.body;
+
+con.query(
+`UPDATE users 
+SET username =?, password=?, firstname=?, lastname=?, email=?, role=? 
+WHERE id=?`,
+[username, hashSalting(password), firstname, lastname, email, role, userid], // Wen user update password they use ordinary pass and change to hash
+ (error, results, fieldes) => {
+    if (error){
+        console.error("Update user error!" +error);
+      return  res.status(500).send("500:Error updating error")
+    } else {
+
+        let output ={
+            id: parseInt(userid),
+            username: req.body.username,
+            firstname: req.body.firstname,
+            lastname: req.body.lastname,
+            email:req.body.email,
+            role: req.body.role,
+        };// do not return password!!!
+        return res.status(200).send(output);
+        //res.status(200).send("200: OK!")
     }
+});
+
 });
 
 /**
  * Admin: Update user by Id
  * Visitor: Update own userinfo
+ * !! You do not place app.put(userPath+"/update/me",...  route after this route. (do not want to check isAdmin )
+ * isAdmin contenue to check app.put(userPath+"/update/me",... due to the way middleware cascades down the route stack.
+ * 
  */
-app.put(userPath+"/update/:id", function (req, res) {
+app.put(userPath+"/update/:id", authToken, isAdmin, function (req, res) {
 
-    let authHeader = req.headers["authorization"];
-    if(authHeader=== undefined){
-        return res.status(400).send("Bad request")
-    }
-    
-    let token = authHeader.slice(7);
-    console.log("Token"+token);
+    let errormessage = "400: "
+    errormessage += inputRequiredMessage(req.body.username, "username");
+    errormessage += inputRequiredMessage(req.body.password,"password");
+    errormessage += inputRequiredMessage(req.body.firstname,"firstname");
+    errormessage += inputRequiredMessage(req.body.lastname,"lastname");
+    errormessage += inputRequiredMessage(req.body.email,"email");
+    errormessage += inputRequiredMessage(req.body.role,"role");
 
-    let decoded;
-    try {
-        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
-    } catch(error){
-        console.log(error);
-        return res.status(401).send("Invalid auth token");
-    }
+    if(errormessage!=="400: "){
+        return res.status(400).send( errormessage)
+}
 
-     console.log("DECODED: "+decoded);
-     console.log("DECODED Role: "+decoded.role);
-
-    if (decoded.role ==="Admin"){
-
-    const data= req.body;
-    console.log(JSON.stringify(req.body))
-    if (!(data && data.username && data.password && data.firstname && data.lastname && data.email && data.role)){
-
-        return res.status(400).send("400: Bad request");
-    }
+    //const data= req.body;
+    //console.log(JSON.stringify(req.body))
+    //if (!(data && data.username && data.password && data.firstname && data.lastname && data.email && data.role)){
+    //    return res.status(400).send("400: Bad request");
+    //}
 
     const userid= req.params.id; 
-    const {username, password, firstname, lastname, email, role}= data;
+    const {username, password, firstname, lastname, email, role}= req.body;
 
 
     con.query(
@@ -539,7 +457,7 @@ app.put(userPath+"/update/:id", function (req, res) {
                 `UPDATE users 
                 SET username =?, password=?, firstname=?, lastname=?, email=?, role=? 
                 WHERE id=?`,
-                [username, hash(password), firstname, lastname, email, role, userid], // When user update password they use ordinary pass and change to hash
+                [username, hashSalting(password), firstname, lastname, email, role, userid], // When user update password they use ordinary pass and change to hash
                  (error, results, fieldes) => {
                     if (error){
                         console.error("Update user error!" +error);
@@ -558,77 +476,15 @@ app.put(userPath+"/update/:id", function (req, res) {
                         //res.status(200).send("200: OK!")
                     }
                 });
-
-            
         }
     });
-
-
-
-    
-} else{
-//*********Visitor***********
-    const data= req.body;
-    if (!(data && data.username && data.password && data.firstname && data.lastname && data.email && data.role)){
-
-        return res.status(400).send("400: Bad request");
-    }
-
-    const userid= decoded.sub;// Visitor can access own data payload sub->id
-    console.log("userid: "+JSON.stringify(userid))
-    const {username, password, firstname, lastname, email, role}= data;
-
-    con.query(
-    `UPDATE users 
-    SET username =?, password=?, firstname=?, lastname=?, email=?, role=? 
-    WHERE id=?`,
-    [username, hash(password), firstname, lastname, email, role, userid], // Wen user update password they use ordinary pass and change to hash
-     (error, results, fieldes) => {
-        if (error){
-            console.error("Update user error!" +error);
-          return  res.status(500).send("500:Error updating error")
-        } else {
-
-            let output ={
-                id: parseInt(userid),
-                username: req.body.username,
-                firstname: req.body.firstname,
-                lastname: req.body.lastname,
-                email:req.body.email,
-                role: req.body.role,
-            };// do not return password!!!
-            return res.status(200).send(output);
-            //res.status(200).send("200: OK!")
-        }
-    });
-
-
-}
-
 });
 
-app.delete(userPath+"/delete/:id", function (req, res) {
+/**
+ * Admin: Delete user byId
+ */
+app.delete(userPath+"/delete/:id", authToken, isAdmin, function (req, res) {
 
-    let authHeader = req.headers["authorization"];
-    if(authHeader=== undefined){
-        return res.status(400).send("Bad request")
-    }
-    
-    let token = authHeader.slice(7);
-    console.log("Token"+token);
-
-    let decoded;
-    try {
-        decoded = jwt.verify(token, "fghjl#a/s&asojcd12askpe%nvhuhimitsu956");
-    } catch(error){
-        console.log(error);
-        return res.status(401).send("Invalid auth token");
-    }
-
-     console.log("DECODED: "+decoded);
-     console.log("DECODED Role: "+decoded.role);
-
-    if (decoded.role ==="Admin"){
       const userid= req.params.id; 
 
       con.query(`DELETE FROM users WHERE id=?`,
@@ -640,8 +496,103 @@ app.delete(userPath+"/delete/:id", function (req, res) {
         }
     return res.status(200).send("This id: "+ userid + " is deleted.");
   });
-} else {
-    return res.status(403).send("Your are not admin! You cannot access this data")
+});
+
+
+/**
+ * Topic endpoints
+ * Role-> Admin or Visitor
+ */
+const topics_columns = ["heading", "comment", "user_id"];// topics table
+let topicPath= "/topic"
+
+/**
+ * Get all topics
+ */
+app.get(topicPath+"/all", authToken,function(req, res){
+    let sql = "SELECT * FROM topics"; 
+    con.query(sql,
+         function (error, results, fields) {
+     return res.status(200).send(results);
+    });    
+}) ;
+
+/**
+ * Get topics by user_id
+ */
+app.get(topicPath+"/user/:user_id", authToken,function(req, res){
+    const userid= req.params.user_id; 
+    con.query(
+        `SELECT * FROM topics WHERE user_id=?`,
+        [userid],
+        (error, results, fieldes)=>{
+            if(results.length>0){
+                res.status(200).send(results);
+            } else{
+                res.status(404).send("404: Not found!");
+            }
+        });
+}) ;
+
+
+/**
+ * Admin: create topic with role Admin or Visitor
+ */
+
+ 
+app.post(topicPath+"/add", authToken, function (req, res) {
+    let errormessage = "400: "
+    const decoded=req.decoded; 
+    const userid= parseInt(decoded.sub);
+    errormessage += inputRequiredMessage(req.body.heading, "heading");
+    errormessage += inputRequiredMessage(req.body.comment,"comment");
+    //errormessage += inputRequiredMessage(userid,"userid"); INt!
+
+    if(errormessage!=="400: "){
+        return res.status(400).send( errormessage)
+    
 }
 
+     for (let key in req.body){
+        if(!topics_columns.includes(key)){
+            return res.status(400).send("Unknown users column: "+ key);
+        }
+     }
+
+   let insertSql= `INSERT INTO topics (heading, comment, user_id) 
+   VALUES ('${req.body.heading}', 
+   '${hashSalting(req.body.comment)}',
+   '${userid}')`; // User do not touch this data
+   console.log(insertSql)
+
+    con.query(insertSql,
+        
+            (error, results) =>{ 
+    
+                if(error){
+                    console.error("Adding user Error!: "+ error);//error detail
+                    
+                    return res.status(500).send("500: Error adding user")
+                }
+
+              console.log(results)
+
+     let selectSql = 'SELECT LAST_INSERT_ID() as insertId';
+
+    con.query(selectSql, (error, results) => {
+            if(error){
+                console.error("Error retrieving last insert ID: " + err);
+                return res.status(500).send("500: Error retrieving user ID");
+            }
+
+                let output ={
+                    id: results[0].insertId,
+                    heading: req.body.heading,
+                    comment: req.body.comment,
+                    user_id: userid,
+                };
+                return res.status(201).send(output);
+            });
+
+        });
 });
