@@ -13,7 +13,7 @@
     <h2>Routes</h2>
 
     <ul>
-        <li><span>&#x1f510;</span><em>POST /login</em> - för inloggnin. Retunerar en JWT som används som bearer token i anrop till outes skyddade med auth. </li>
+        <li><span>         </span><em>POST /login</em> - för inloggnin. Retunerar en JWT som används som bearer token i anrop till outes skyddade med auth. </li>
         <li><span>&#x1f510;</span><em>GET /token-info</em> - Inloggade användare returnerar egen token-info. </li>
         
         <li><span>&#x1f510;</span><em>POST /user/add</em> - Admin kan addera en ny användare. </li>
@@ -21,7 +21,7 @@
         <li><span>&#x1f510;</span><em>PUT /user/update/:id</em> - Admin kan uppdatera användare-info av Id. </li>
         <li><span>&#x1f510;</span><em>GET /user/me</em> - Inloggade användare returnerar egen användare-info. </li>
         <li><span>&#x1f510;</span><em>GET /user/byIdORUsername/:idORusername</em> - Admin kan returnera användare av angivet id eller username eller status 404 om användaren saknas. </li>
-        <li><span>&#x1f510;</span><em>GET /user/find</em> - Admin kan returnera en användare av angivet id eller username. 
+        <li><span>&#x1f510;</span><em>GET /user/find</em> - Admin kan returnera en användare av angivet username, firstname, lastname, email eller role. 
             *ex: http://localhost:3000/user/find?username=pegu http://localhost:3000/user/find?role=Admin </li> 
 
         <li><span>&#x1f510;</span><em>GET /user/all</em> - Admin kan returnerar alla användare. </li>
