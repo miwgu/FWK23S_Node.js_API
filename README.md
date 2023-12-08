@@ -16,6 +16,6 @@ You can check data.sql
 Import Insomnia_topic_db2023.json
 
 ## Log in 
-- username: migu pass: m123
+- username: migu password: m123 (role:Admin)
 - You need to change login routes code then you can login with m123 as Admin role and update password. You can change to hashSalting code then you login again.  
 - Read rad 114 in index.js
