@@ -321,6 +321,19 @@ app.post(userPath+"/add", authToken, isAdmin, function (req, res) {
         }
      }
 
+     //Check the username alredy exist or not
+    con.query(
+            `SELECT * FROM users WHERE username=?`,
+            [req.body.username],
+             (error, results)=>{
+                if(error){
+                    return res.status(500).send("500: Internal server error")
+                }
+    
+                if(results.length>0){
+                    return res.status(400).send("400: username already exist. You need to take an unique username! ")
+                }
+
    let insertSql= `INSERT INTO users (username, password, firstname, lastname, email, role) 
    VALUES ('${req.body.username}', 
    '${hashSalting(req.body.password)}',
@@ -363,6 +376,7 @@ app.post(userPath+"/add", authToken, isAdmin, function (req, res) {
             });
 
         });
+    });
 });
 
 
@@ -538,7 +552,6 @@ app.get(topicPath+"/user/:user_id", authToken, isAdmin,function(req, res){
 /**
  * Admin: create topic with role Admin or Visitor
  */
-
  
 app.post(topicPath+"/add", authToken, function (req, res) {
     let errormessage = "400: "
@@ -558,7 +571,8 @@ app.post(topicPath+"/add", authToken, function (req, res) {
             return res.status(400).send("Unknown users column: "+ key);
         }
      }
-
+            
+        
    let insertSql= `INSERT INTO topics (heading, comment, user_id) 
    VALUES ('${req.body.heading}', 
    '${hashSalting(req.body.comment)}',
@@ -595,4 +609,4 @@ app.post(topicPath+"/add", authToken, function (req, res) {
             });
 
         });
-});
+    });
