@@ -3,7 +3,7 @@ let app = express();
 app.listen(3000);
 console.log("Serve runs:port 3000");
 
-const myLogger = function (req, res, next) {
+const myLogger =  (req, res, next)=> {
     const clientIP = req.ip;
     const timestamp= new Date().toUTCString();
     const log =`${clientIP} [${timestamp}]"${req.method} ${req.originalUrl}"`
