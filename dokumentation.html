@@ -13,10 +13,10 @@
     <h2>Routes</h2>
 
     <ul>
-        <li><span>         </span><em>POST /login</em> - för inloggnin. Retunerar en JWT som används som bearer token i anrop till outes skyddade med auth. </li>
-        <li><span>&#x1f510;</span><em>GET /token-info</em> - Inloggade användare returnerar egen token-info. </li>
+        <li><span>         </span><em>POST /login</em> - för inloggnin. Retunerar en JWT som används som bearer token i anrop till outes skyddade med auth. status 404 Om username och password saknas. status 500 fel login. ststus 401 Om skrivas fel username eller password  </li>
+        <li><span>&#x1f510;</span><em>GET /token-info</em> - Inloggade användare returnerar egen token-info och ststus 200. </li>
         
-        <li><span>&#x1f510;</span><em>POST /user/add</em> - Admin kan addera en ny användare. 
+        <li><span>&#x1f510;</span><em>POST /user/add</em> - Admin kan addera en ny användare och status 201. status 400 om alla obligatoriska fält inte är i filda och typen inte är string, om fält namn är fel, om username redan finns. status 500 om inte kunde addera ny användare i databas och Fel vid hämtning av användar-ID  
         {
             "username": "unikt namn",
             "password": "u123",
@@ -27,25 +27,28 @@
         }
         Alla fält är obligatoriskt. username ska vara unikt.
         </li>
-        <li><span>&#x1f510;</span><em>PUT /user/update/me</em> - Inloggade användare uppdatera egen användare-info. </li>
-        <li><span>&#x1f510;</span><em>PUT /user/update/:id</em> - Admin kan uppdatera användare-info av Id. </li>
-        <li><span>&#x1f510;</span><em>GET /user/me</em> - Inloggade användare returnerar egen användare-info. </li>
-        <li><span>&#x1f510;</span><em>GET /user/byIdORUsername/:idORusername</em> - Admin kan returnera användare av angivet id eller username eller status 404 om användaren saknas. </li>
-        <li><span>&#x1f510;</span><em>GET /user/find</em> - Admin kan returnera en användare av angivet username, firstname, lastname, email eller role. 
+        <li><span>&#x1f510;</span><em>PUT /user/update/me</em> - Inloggade användare uppdatera egen användare-info. status 400 om alla obligatoriska fält inte är i filda och typen inte är string,</li>
+        <li><span>&#x1f510;</span><em>PUT /user/update/:id</em> - Admin kan uppdatera användare-info av Id och stats 200. status 400 om alla obligatoriska fält inte är i filda och typen inte är string. status 500 uppdatering fel. </li>
+        <li><span>&#x1f510;</span><em>GET /user/me</em> - Inloggade användare returnerar egen användare-info och status 200. </li>
+        <li><span>&#x1f510;</span><em>GET /user/byIdORUsername/:idORusername</em> - Admin kan returnera användare av angivet id eller username och status 200. status 404 om användaren saknas. status 404 om det inte finns angivit ID. status 500 uppdatering fel. </li>
+        <li><span>&#x1f510;</span><em>GET /user/find</em> - Admin kan returnera en användare av angivet username, firstname, lastname, email eller role och status 200. 
             *ex: http://localhost:3000/user/find?username=pegu http://localhost:3000/user/find?role=Admin </li> 
 
-        <li><span>&#x1f510;</span><em>GET /user/all</em> - Admin kan returnerar alla användare. </li>
-        <li><span>&#x1f510;</span><em>DELETE /users/delete/:id</em> - Admin kan deleta en användare av angivet id.</li>
-        <li><span>&#x1f510;</span><em>POST /topic/add</em> - Inloggade användare Skapar en ny rubrik(topic)
+        <li><span>&#x1f510;</span><em>GET /user/all</em> - Admin kan returnerar alla användare och status 200. </li>
+        <li><span>&#x1f510;</span><em>DELETE /users/delete/:id</em> - Admin kan deleta en användare av angivet id och status 200. status 500 fel ta bort userS </li>
+        <li><span>&#x1f510;</span><em>POST /topic/add</em> - Inloggade användare Skapar en ny rubrik(topic) och status 201. status 400 om alla obligatoriska fält inte är i filda och typen inte är string. status 500 fel addera topic och Fel vid hämtning av användar-ID.
             {
                 "heading": "Om Uppgift1",
                 "comment": "Hej Jag vill fråga .....................",
             }
             Alla fält är obligatoriskt. *user_id är inställt på inloggade användar-ID.
         </li>
-        <li><span>&#x1f510;</span><em>GET /topic/all</em> - Inloggade användare kan returnerar alla rubrik(topics). </li>
-        <li><span>&#x1f510;</span><em>GET /topic/user/:id</em> - Admin kan returnera rubrik(topics) av angivet användares id. </li>
+        <li><span>&#x1f510;</span><em>GET /topic/all</em> - Inloggade användare kan returnerar alla rubrik(topics) och status 200. </li>
+        <li><span>&#x1f510;</span><em>GET /topic/user/:id</em> - Admin kan returnera rubrik(topics) av angivet användares id och status 200. status 404 om det inte finns angivit id.</li>
+
     </ul>
+    <p>* Autentisering med token: status 400 om Authorization-rubriken är odefinierad. status 400 Om det avkodade innehållet i token är null. status 401 om autentiseringstoken är ogiltigt. </p>
+    <p>* isAdmin: status 403 om användare inte är Admin</p>
 
     <p><span>&#x1f510;</span>= denna route kräver ett giltigt bearer token i authorization header.</p>
 </body>

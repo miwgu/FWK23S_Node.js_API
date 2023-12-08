@@ -595,7 +595,7 @@ app.post(topicPath+"/add", authToken, function (req, res) {
                 if(error){
                     console.error("Adding user Error!: "+ error);//error detail
                     
-                    return res.status(500).send("500: Error adding user")
+                    return res.status(500).send("500: Error adding topic")
                 }
 
               console.log(results)
