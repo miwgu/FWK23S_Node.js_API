@@ -520,7 +520,7 @@ app.get(topicPath+"/all", authToken,function(req, res){
 /**
  * Get topics by user_id
  */
-app.get(topicPath+"/user/:user_id", authToken,function(req, res){
+app.get(topicPath+"/user/:user_id", authToken, isAdmin,function(req, res){
     const userid= req.params.user_id; 
     con.query(
         `SELECT * FROM topics WHERE user_id=?`,

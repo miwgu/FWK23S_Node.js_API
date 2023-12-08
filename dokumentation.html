@@ -7,15 +7,27 @@
 </head>
 <body>
     <h1>Server Uppgift 2: Dokumentation av det här APIet</h1>
+    <p>Importera topic_db2023 till Insomnia</p>
+    <p>Kolla på data.sql för att skapa topic_db2023 (database)</p>
     <h2>Routes</h2>
 
     <ul>
-        <li><span>&#x1f510;</span><em>GET /users</em> - returnerar alla användare. </li>
-        <li><span>&#x1f510;</span><em>GET /users/{id}</em> - returnerar en user med angivet id eller status 204 om användaren saknas.</li>
-        <li><span>&#x1f510;</span><em>POST /users</em> - Skapar en ny användare accepterar JSON object på formatet<br>
-            {"username":"unik namn", "first_name":"", "last_name":""}. username är obligatoriskt och ska var unikt.</li>
-        <li><span>         </span><em>POST /login</em> - för inloggnin. Retunerar en JWT som används som bearer token i anrop till outes skyddade med auth. <br>
-            Accepterar JSON object på formatet {"username":"", "password":"", "last_name":""}</li>
+        <li><span>&#x1f510;</span><em>POST /login</em> - för inloggnin. Retunerar en JWT som används som bearer token i anrop till outes skyddade med auth. </li>
+        <li><span>&#x1f510;</span><em>GET /token-info</em> - Inloggade användare returnerar egen token-info. </li>
+        
+        <li><span>&#x1f510;</span><em>POST /user/add</em> - Admin kan addera en ny användare. </li>
+        <li><span>&#x1f510;</span><em>PUT /user/update/me</em> - Inloggade användare uppdatera egen användare-info. </li>
+        <li><span>&#x1f510;</span><em>PUT /user/update/:id</em> - Admin kan uppdatera användare-info av Id. </li>
+        <li><span>&#x1f510;</span><em>GET /user/me</em> - Inloggade användare returnerar egen användare-info. </li>
+        <li><span>&#x1f510;</span><em>GET /user/byIdORUsername/:idORusername</em> - Admin kan returnera användare av angivet id eller username eller status 404 om användaren saknas. </li>
+        <li><span>&#x1f510;</span><em>GET /user/find</em> - Admin kan returnera en användare av angivet id eller username. 
+            *ex: http://localhost:3000/user/find?username=pegu http://localhost:3000/user/find?role=Admin </li> 
+
+        <li><span>&#x1f510;</span><em>GET /user/all</em> - Admin kan returnerar alla användare. </li>
+        <li><span>&#x1f510;</span><em>DELETE /users/delete/:id</em> - Admin kan deleta en användare av angivet id.</li>
+        <li><span>&#x1f510;</span><em>POST /topic/add</em> - Inloggade användare Skapar en ny rubrik(topic)</li>
+        <li><span>&#x1f510;</span><em>GET /topic/all</em> - Inloggade användare kan returnerar alla rubrik(topics). </li>
+        <li><span>&#x1f510;</span><em>GET /topic/user/:id</em> - Admin kan returnera rubrik(topics) av angivet användares id. </li>
     </ul>
 
     <p><span>&#x1f510;</span>= denna route kräver ett giltigt bearer token i authorization header.</p>
